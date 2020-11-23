@@ -30,6 +30,7 @@ from scapy.layers.inet6 import IP6Field
 # Custom imports
 from pysap.SAPNI import SAPNI
 from pysap.utils.fields import StrFixedLenPaddedField, PacketNoPadded
+import SAPRFCCrypt
 
 
 # RFC Request Type values
@@ -313,6 +314,25 @@ cpic_suff_padd = {
     "suff_padd15": "\x10\x04\x24",
 }
 """RFC CPIC Stuff Padding values"""
+
+
+class EncryptedPasswordField(StrLenField):
+    '''Field class for encrypted password field in RFC F_ACCEPT_CONVERSATION header.
+    Automatically handles the encryption of read data and encryption of changed data.
+    '''
+    def getfield(self, pkt, s):
+        len_pkt = self.length_from(pkt)
+        password = self.m2i(pkt, s[:len_pkt])
+        rest = s[len_pkt:]
+        password = SAPRFCCrypt.decrypt(password)
+        return rest, password
+    def addfield(self, pkt, s, val):
+        return s + self.i2m(pkt, val)
+    def any2i(self, pkt, x):
+        if x is None:
+            return ""
+        return SAPRFCCrypt.encrypt(x)
+
 
 
 class SAPRFCEXTEND(PacketNoPadded):
